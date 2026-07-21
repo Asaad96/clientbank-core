@@ -199,8 +199,8 @@ void  PrintClientRecord ( sClient Client)
     cout << "|  " <<  setw(12) << left << Client.AccountBalance ;
     cout << endl;
 
-  
 }
+
 void  PrintClientRecordDeposit ( sClient Client)
 {
     cout << fixed << setprecision(2);
@@ -218,7 +218,50 @@ void  PrintClientRecordDeposit ( sClient Client)
   
 }
 
+void  PrintClientRecordBalanceList ( sClient Client)
+{
+    cout << fixed << setprecision(2);
 
+    cout << "|  " <<  setw(15) << left << Client.AccountNumber;
+  //  cout << "|  " <<  setw(10) << left << Client.PinCode;
+    cout << "|  " <<  setw(40) << left << Client.Name ;
+   // cout << "|  " <<  setw(12) << left << Client.Phone;
+    cout << "|  " <<  setw(12) << left << Client.AccountBalance ;
+    cout << endl;
+
+}
+
+void PrintBalancesList ()
+{   
+
+    
+    vector<sClient> vClients = LoadClientDataFromFile(ClientsFileName);
+    double Total = 0;
+    cout << "\n\t\t\t\t\t\t\t Balances List (" << vClients.size() << ") Clients   \n";
+    cout << "=======================================================================================================================================" << endl;
+    // cout << "| Account Number    |    Client Name               |     Balance       \n"; 
+    // cout << "=======================================================================================================================================" << endl;
+
+    cout << "|  " << left << setw(15) << "Account Number";
+    //cout << "|  " << left << setw(10) << "Pin Code " ;
+    cout << "|  " << left << setw(40) << "Client's Name" ;
+    //cout << "|  " << left << setw(12) << "Phone " ;
+    cout << "|  " << left << setw(12) << "Account Balance " ;
+    cout <<"\n--------------------------------------------------------------------------------------------";
+    cout <<"-------------------------------------------\n" << endl;
+
+    for (sClient Client : vClients)
+   {
+        
+        PrintClientRecordBalanceList(Client);
+        Total = Total +Client.AccountBalance; 
+        cout << endl;
+    }
+    cout <<"\n--------------------------------------------------------------------------------------------";
+    cout <<"-------------------------------------------\n" << endl;
+    cout << "\n\t\t\t\t\t\t\t Total Balances = "<< Total ;
+
+}
 
 
 
@@ -638,7 +681,11 @@ void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClie
             }
 
         case Total:
-            {
+            {   ClearScreen();
+                PrintBalancesList();
+                cout << "\n\nPress any key to continue...";
+                cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                cin.get();
                 break;
             }
         case Main:
