@@ -5,7 +5,7 @@ Overview
 ClientBank Core simulates the core operations of a bank's client management system entirely from the terminal. It manages client records — creation, lookup, updates, deletion, and financial transactions — with all data persisted to disk between sessions.
 The project is structured to reflect real-world backend design patterns at a small scale: separation of data access, business logic, and presentation layers; consistent in-memory/on-disk state synchronization; and defensive handling of user input.
 Preview
-<table> <tr> <td align="center"><b>Main Menu</b></td> <td align="center"><b>Transactions Menu</b></td> </tr> <tr> <td><img src="img/.png" width="380"/></td> <td><img src="img/transactions.png" width="380"/></td> </tr> </table> <p align="center"><b>Deposit Flow</b></p> <p align="center"><img src="img/deposit.png" width="500"/></p>
+<table> <tr> <td align="center"><b>Main Menu</b></td> <td align="center"><b>Transactions Menu</b></td> </tr> <tr> <td><img src="./clientbank-core/img/Main.png" width="380"/></td> <td><img src="img/transactions.png" width="380"/></td> </tr> </table> <p align="center"><b>Deposit Flow</b></p> <p align="center"><img src="img/deposit.png" width="500"/></p>
 Features
 Client management — add, view, update, delete, and search client records
 Transactions module — deposit and withdraw funds with balance validation
