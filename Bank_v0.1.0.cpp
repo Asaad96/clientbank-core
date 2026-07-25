@@ -4,10 +4,12 @@
 #include <fstream>
 #include <iomanip>
 #include <limits>
+#include "Log.h"
 
 using namespace std;
 
-const string ClientsFileName = "/Users/asaadmbaz/Downloads/Cprojects/PA-Course7/Clients.text";
+const string ClientsFileName = "/Users/asaadmbaz/Downloads/Cprojects/Project_Bank/clientbank-core/Clients.text";
+const string UsersFileName   = "/Users/asaadmbaz/Downloads/Cprojects/Project_Bank/clientbank-core/user.text";
 
 enum Menue  {  Show = 1 , Add = 2  ,  Delete = 3 , Update = 4 , Find = 5 , Transactions = 6 , Exit = 7 };
 
@@ -26,6 +28,16 @@ struct sClient
    double AccountBalance;
    bool MarkForDelete = false;
  };
+
+
+struct sUsers
+{
+  string Username;
+  short Password;
+  short value;
+
+};
+
 
 vector <string> SplitString ( string S1 , string Delim)
 {
@@ -74,6 +86,8 @@ sClient ReadNewClient()
 }
 
 
+
+
 sClient ConverLineToRecord (string line , string Seperator = "#//#")
 {
     sClient Client ;
@@ -96,6 +110,22 @@ sClient ConverLineToRecord (string line , string Seperator = "#//#")
     return Client;
 }
 
+sUsers ConverLineToRecordUser (string line, string Seperator ="#//#")
+{
+    sUsers User;
+    vector <string> vUserDate;
+
+    vUserDate = SplitString(line, Seperator);
+    if(vUserDate.size() >= 3)
+    {
+        User.Username = vUserDate[0];
+        User.Password =stoi(vUserDate[1]);
+        User.value = stoi(vUserDate[2]);
+    }
+    return User;
+      
+}
+
 
 
 vector <sClient> LoadClientDataFromFile (string FileName)
@@ -108,10 +138,6 @@ vector <sClient> LoadClientDataFromFile (string FileName)
 
         if(MyFile.is_open())
         {
-           
-            //cout << " Error: Could not Open file {" << FileName << "]" << endl;
-          //  return vClients;
-        //}
 
             string line;
             sClient Client;
@@ -127,6 +153,36 @@ vector <sClient> LoadClientDataFromFile (string FileName)
         }
     return vClients; 
 }
+
+vector <sUsers> LoadUsersDataFromFile (string FileName)
+{
+
+    vector <sUsers> vUsers;
+    fstream MyFile;
+
+    MyFile.open(FileName, ios::in);
+
+        if(MyFile.is_open())
+        {
+
+            string line;
+            sUsers Users;
+
+
+            while(getline(MyFile, line))
+            {
+                Users = ConverLineToRecordUser(line);
+                    vUsers.push_back(Users);
+            }
+
+            MyFile.close();
+        }
+    return vUsers; 
+}
+
+
+
+
 
 string ConvertRecordToLine(sClient  Client , string Seperator = "#//#")
 {
@@ -263,7 +319,15 @@ void PrintBalancesList ()
 
 }
 
+void PrintLongInScreen()
+{
 
+PrintColoredLogo();
+cout <<"\n--------------------------------------------------\n";
+cout <<"                   Login Screen                     \n";
+cout <<"\n--------------------------------------------------\n";
+cout <<"Username: ";
+}
 
 
 sClient ChangeClientRecord(string AccountNumber)
@@ -357,6 +421,26 @@ bool FindClientByAccountNumber (string& AccountNumber, vector <sClient>& vClient
     return false; 
     cout << "\nClient With Account Number "<< AccountNumber <<" Is Not Found\n";
 
+}
+
+
+bool FindUser (string& Username, vector <sUsers>& vUsers, sUsers& Users, short& Password )
+{
+    for (sUsers U : vUsers )
+    {
+        if((U.Username == Username) && (U.Password == Password))
+        {
+           
+            return true;
+        }
+         
+    } 
+    cout << "\nInvaild Username Or Password\n";
+    cout << "\nEnter Username: ";
+    cin >> Username;
+    cout << "\nPassword : ";
+    cin >> Password;
+    return FindUser(Username, vUsers, Users, Password);
 }
 
 bool MarkClientFileDeleteByAccountNumber (string AccountNumber , vector <sClient>& vClients)
@@ -637,6 +721,7 @@ TransactionsMenue Transtart ()
 
  short Choose;
     do {
+        PrintColoredLogo();
         PrintTransactionsMenuScreen();
         cin >> Choose ;
 
@@ -666,6 +751,7 @@ void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClie
     {
         case Deposit:
             {   ClearScreen();
+                PrintColoredLogo();
                 PrintDepositScreen();
                 //cin >> AccountNumber;
                 AddDepositAmount(AccountNumber, vClients);
@@ -675,6 +761,7 @@ void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClie
 
         case Withdraw: 
             { ClearScreen();
+              PrintColoredLogo();
               PrintWithdrawScreen(); 
               WithdrawAmount(AccountNumber, vClients);
                 break;
@@ -682,6 +769,7 @@ void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClie
 
         case Total:
             {   ClearScreen();
+                PrintColoredLogo();
                 PrintBalancesList();
                 cout << "\n\nPress any key to continue...";
                 cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
@@ -690,6 +778,7 @@ void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClie
             }
         case Main:
             {   ClearScreen();
+                PrintColoredLogo();
                // PreformMenuOption(Choice, vClients,AccountNumber, Client);
                //GoToShowMainMenu();
                 break;
@@ -701,11 +790,13 @@ void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClie
 
 void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& AccountNumber ) 
 {
+     // PrintColoredLogo();
       switch (Choice)
       {
         case Show:
             {
                   ClearScreen();
+                  PrintColoredLogo();
                   ShowCleintsList(); 
                   break;
             }
@@ -713,6 +804,8 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
             { 
            
                  ClearScreen();
+                 PrintColoredLogo();
+                 cout << "\n-----------------------------------------------------------\n";
                  AddClients(vClients);
                  //GoToShowMainMenu(); 
                  break;
@@ -721,6 +814,7 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
        case Delete:
             {
                 ClearScreen();
+                PrintColoredLogo();
                // string AccountNumber;
                 cout << "Enter Account Number to delete: \n";
                 cin >> AccountNumber;
@@ -732,6 +826,7 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
     case Update:
             {
                ClearScreen();
+               PrintColoredLogo();
                cout << "Enter Account Number to Update: \n";
                cin >> AccountNumber;
                UpdateClientByAccountNumber(AccountNumber, vClients);
@@ -741,6 +836,7 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
     case Find:
            {   
                ClearScreen();
+               PrintColoredLogo();
                sClient Client ; 
                cout << "Enter Account Number to Find: \n";
                cin >> AccountNumber;
@@ -767,7 +863,8 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
     }    
 
     if (Choice != Exit && Choice != Transactions)
-    {
+    {   
+        
         GoToShowMainMenu();
     }
  
@@ -778,6 +875,7 @@ Menue start ()
     short Choose ;
    
     do {
+        PrintColoredLogo();
         PrintIntroFace();
         cin >> Choose ;
 
@@ -805,15 +903,37 @@ void startMainMenu ()
 {
     
  vector <sClient> vClients = LoadClientDataFromFile(ClientsFileName);
-
+ vector <sUsers> vUsers = LoadUsersDataFromFile(UsersFileName);
  Menue Choice ;
-   do 
-   {    sClient Client;
-        string AccountNumber ;
-        Choice =  start();
-        PreformMenuOption(Choice, vClients, AccountNumber);
+  short Password;
+  string Username;
+  sUsers User;
 
-    } while (Choice != Exit ); 
+PrintLongInScreen();
+cin >> Username;
+cout <<"\nPassword : ";
+cin >> Password;
+if(FindUser(Username, vUsers, User, Password))
+ {
+   do 
+   {   
+        sClient Client;
+        string AccountNumber ;
+       
+
+      
+       
+
+             
+         ClearScreen();
+         Choice =  start();
+         PreformMenuOption(Choice, vClients, AccountNumber);
+      
+                       
+
+
+      } while (Choice != Exit ); 
+ }
    
 }
 
