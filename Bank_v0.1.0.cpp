@@ -6,18 +6,33 @@
 #include <limits>
 #include "Log.h"
 
+
+#ifdef _WIN32
+    #include <conio.h>
+#else
+    #include <termios.h>
+    #include <unistd.h>
+#endif
+
+
+
 using namespace std;
 
 const string ClientsFileName = "/Users/asaadmbaz/Downloads/Cprojects/Project_Bank/clientbank-core/Clients.text";
 const string UsersFileName   = "/Users/asaadmbaz/Downloads/Cprojects/Project_Bank/clientbank-core/user.text";
 
-enum Menue  {  Show = 1 , Add = 2  ,  Delete = 3 , Update = 4 , Find = 5 , Transactions = 6 , Exit = 7 };
 
-enum TransactionsMenue { Deposit = 1 , Withdraw = 2 , Total  = 3 , Main  = 4 };
+enum Menue  {  Show = 1 , Add = 2  ,  Delete = 3 , Update = 4 , Find = 5 , Transactions = 6 , Manage = 7 , LogOut = 8 , Exit = 9 };
+
+enum enTransactionsMenue { Deposit = 1 , Withdraw = 2 , Total  = 3 , Main  = 4 };
 
 
+enum enManiMenuManageMainOptions { eListUsers = 1 , eAddUser = 2, eDeleteUser = 3, eUpdateUser = 4, eFindUser = 5, eMainMenu = 6 };
+
+enum enMainMenuPermisions { eAll = -1, pListClients = 1 , pAddNewClient = 2, pDeletClient = 4 , pUpdateClient = 8, pFindClient = 16, pTransactions = 32, pManageUsers = 64 };
 
 void startMainMenu();
+void LogIn();
 
 struct sClient
 {
@@ -33,12 +48,12 @@ struct sClient
 struct sUsers
 {
   string Username;
-  short Password;
+  string Password;
   short value;
 
 };
 
-
+sUsers CurrentUser;
 vector <string> SplitString ( string S1 , string Delim)
 {
     vector<string> vString;
@@ -119,7 +134,7 @@ sUsers ConverLineToRecordUser (string line, string Seperator ="#//#")
     if(vUserDate.size() >= 3)
     {
         User.Username = vUserDate[0];
-        User.Password =stoi(vUserDate[1]);
+        User.Password =vUserDate[1];
         User.value = stoi(vUserDate[2]);
     }
     return User;
@@ -177,6 +192,7 @@ vector <sUsers> LoadUsersDataFromFile (string FileName)
 
             MyFile.close();
         }
+       // cout << "DEBUG: Loaded " << vUsers.size() << " users.\n";
     return vUsers; 
 }
 
@@ -326,7 +342,7 @@ PrintColoredLogo();
 cout <<"\n--------------------------------------------------\n";
 cout <<"                   Login Screen                     \n";
 cout <<"\n--------------------------------------------------\n";
-cout <<"Username: ";
+//cout <<"Username: ";
 }
 
 
@@ -374,10 +390,12 @@ void PrintIntroFace ()
     cout << "      [4] Update Client Info.   \n";
     cout << "      [5] Find Client.          \n";
     cout << "      [6] Transactions          \n"; 
-    cout << "      [7] Exit.                 \n";
+    cout << "      [7] Manage Users          \n";
+    cout << "      [8] Log Out               \n";
+    cout << "      [9] Exit                  \n";   
 
     cout << "======================================================================" << endl;
-    cout << "Choose What do you want to do ? [1 to 7]? \n";
+    cout << "Choose What do you want to do ? [1 to 9]? \n";
 
 }
 
@@ -424,23 +442,33 @@ bool FindClientByAccountNumber (string& AccountNumber, vector <sClient>& vClient
 }
 
 
-bool FindUser (string& Username, vector <sUsers>& vUsers, sUsers& Users, short& Password )
+bool FindUser (string& Username, vector <sUsers>& vUsers, sUsers& Users)
 {
     for (sUsers U : vUsers )
     {
-        if((U.Username == Username) && (U.Password == Password))
+        if((U.Username == Username)) 
         {
-           
+           Users = U;
             return true;
         }
          
     } 
-    cout << "\nInvaild Username Or Password\n";
-    cout << "\nEnter Username: ";
-    cin >> Username;
-    cout << "\nPassword : ";
-    cin >> Password;
-    return FindUser(Username, vUsers, Users, Password);
+    return false;
+}
+
+bool FindUserByUsernameAndPassword(string Username, string Password, sUsers& Users)
+{
+  vector <sUsers> vUsers = LoadUsersDataFromFile(UsersFileName);
+    for(sUsers U : vUsers) 
+    {
+        if(U.Username == Username && U.Password == Password)
+        { 
+            Users = U ; 
+            return true;
+        }
+    }
+    return false;
+   
 }
 
 bool MarkClientFileDeleteByAccountNumber (string AccountNumber , vector <sClient>& vClients)
@@ -716,7 +744,7 @@ void GoToShowMainMenu ()
 
 }
 
-TransactionsMenue Transtart ()
+enTransactionsMenue Transtart ()
 {
 
  short Choose;
@@ -738,14 +766,14 @@ TransactionsMenue Transtart ()
     
    
 
-    return (TransactionsMenue)Choose;
+    return (enTransactionsMenue)Choose;
 }
 
 
 
 //void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& AccountNumber,  sClient& Client); 
 
-void PreformTransMenuOption ( TransactionsMenue Choice , vector <sClient>& vClients , string& AccountNumber )
+void PreformTransMenuOption ( enTransactionsMenue Choice , vector <sClient>& vClients , string& AccountNumber )
 {
     switch (Choice)
     {
@@ -847,7 +875,7 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
     case Transactions:
            {
                     
-               TransactionsMenue TransChoice;
+               enTransactionsMenue TransChoice;
                do
               {
                 ClearScreen();
@@ -857,12 +885,29 @@ void PreformMenuOption( Menue Choice , vector <sClient>& vClients , string& Acco
     
                break;
            }
+        
+    case Manage:
+           {
+            ClearScreen();
+            break;
+           }
 
-    case Exit:
+
+    case LogOut:
+           {
+           ClearScreen();
+           PrintColoredLogo();
+            LogIn();
+
               break;
-    }    
+          }   
+    case Exit: 
+            
+                break;
+            
+      }
 
-    if (Choice != Exit && Choice != Transactions)
+    if (Choice != LogOut && Choice != Transactions && Choice != Exit )
     {   
         
         GoToShowMainMenu();
@@ -888,7 +933,7 @@ Menue start ()
             cin >> Choose;
          }
        }
-       while(Choose < 1 || Choose > 7 );
+       while(Choose < 1 || Choose > 9 );
     
    
 
@@ -903,43 +948,129 @@ void startMainMenu ()
 {
     
  vector <sClient> vClients = LoadClientDataFromFile(ClientsFileName);
- vector <sUsers> vUsers = LoadUsersDataFromFile(UsersFileName);
  Menue Choice ;
-  short Password;
-  string Username;
-  sUsers User;
 
-PrintLongInScreen();
-cin >> Username;
-cout <<"\nPassword : ";
-cin >> Password;
-if(FindUser(Username, vUsers, User, Password))
- {
-   do 
-   {   
+ 
+     
+      do 
+      {   
         sClient Client;
-        string AccountNumber ;
-       
-
-      
-       
-
-             
+        string AccountNumber ; 
          ClearScreen();
          Choice =  start();
          PreformMenuOption(Choice, vClients, AccountNumber);
-      
-                       
 
-
-      } while (Choice != Exit ); 
- }
+       } while (Choice != Exit ); 
+    
+     
+  
    
 }
 
+
+
+bool LoadUserInfo(string Username, string Password)
+{
+   if (FindUserByUsernameAndPassword(Username, Password, CurrentUser))
+           return true;
+   else
+           return false;
+}
+
+
+
+string ReadPassword() {
+    string password = "";
+    char ch;
+
+#ifndef _WIN32
+    struct termios oldt, newt;
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+    newt.c_lflag &= ~ECHO; // تم التصحيح هنا إضافة c_ قبل lflag
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+#endif
+
+    while (true) {
+#ifdef _WIN32
+        ch = _getch(); 
+#else
+        ch = cin.get(); 
+#endif
+
+        if (ch == '\n' || ch == '\r') {
+            break;
+        }
+        
+        #ifdef _WIN32
+        if (ch == 8) { 
+        #else
+        if (ch == 127 || ch == 8) { 
+        #endif
+            if (!password.empty()) {
+                password.pop_back();
+                cout << "\b \b"; 
+            }
+        } 
+        else if (ch >= 32 && ch <= 126) { 
+            password += ch;
+            cout << '*';
+        }
+    }
+
+#ifndef _WIN32
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+#endif
+
+    cout << endl;
+    return password;
+}
+
+
+
+
+
+
+
+
+
+void LogIn()
+{
+
+   bool LogInFaild = false;
+   string Username;
+   string Password;
+ 
+    do 
+    {
+        ClearScreen();
+        PrintLongInScreen();
+
+        if (LogInFaild)
+        {
+            cout << "\nInvaild Username/Password!\n"; 
+        }
+        cout << "Username: ";
+        cin >> Username;
+        cout << "\nPassword: ";
+       // cin >> Password;
+       cin.ignore(numeric_limits<streamsize>::max(), '\n');
+       Password = ReadPassword();
+        LogInFaild = !LoadUserInfo(Username, Password);
+    } while(LogInFaild);
+
+  startMainMenu();
+    
+}
+
+
+
+
+
 int main ()
 {
-startMainMenu ();
+ //startMainMenu();
+LogIn();
 return 0; 
 }
 
