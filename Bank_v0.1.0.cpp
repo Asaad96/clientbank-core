@@ -5,6 +5,8 @@
 #include <iomanip>
 #include <limits>
 #include "Log.h"
+#include "picosha2.h"
+#include <random>
 
 #ifdef _WIN32
     #include <conio.h>
@@ -41,13 +43,13 @@ struct sUsers
 {
   string Username;
   string Password;
+  string Salt;
   int Permissions;
   bool MarkForDelete = false;
 };
 
 sUsers CurrentUser;
 
-// --- دوال تنظيف المسافات والمحارف المخفية (Trim) ---
 string TrimLeft(string S1)
 {
     for (size_t i = 0; i < S1.length(); i++)
@@ -99,6 +101,45 @@ vector<string> SplitString(string S1, string Delim)
         vString.push_back(S1);
     }
     return vString;
+}
+
+
+string GenerateSalt(int Length = 16)
+{
+    const string Chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    random_device rd; 
+    mt19937 gen(rd());
+    uniform_int_distribution<> dist(0, (int)Chars.size() - 1);
+
+    string Salt;
+    for (int i = 0; i < Length; i++)
+    {
+        Salt += Chars[dist(gen)];
+    }
+    return Salt;
+}
+
+string HashPassword(const string& Password, const string& Salt)
+{
+    string Salted = Salt + Password;
+    return picosha2::hash256_hex_string(Salted);
+}
+
+bool VerifyPassword(const string& EnteredPassword, const string& Salt, const string& StoredHash)
+{
+
+    return HashPassword(EnteredPassword, Salt) == StoredHash;
+
+}
+
+bool LooksLikeSh256Hash(const string& S)
+{
+    if (S.length() != 64) return false;
+    for (char c: S)
+    {
+        if (!isxdigit((unsigned char)c)) return false;
+    }
+    return true;
 }
 
 double ReadPositiveNumber(string Message)
@@ -166,11 +207,21 @@ sUsers ConverLineToRecordUser(string line, string Seperator = "#//#")
     sUsers User;
     vector<string> vUserDate = SplitString(line, Seperator);
 
-    if (vUserDate.size() >= 3)
+    if (vUserDate.size() >= 4)
     {
         User.Username    = Trim(vUserDate[0]);
         User.Password    = Trim(vUserDate[1]);
-        User.Permissions = stoi(Trim(vUserDate[2]));
+        User.Salt        = Trim(vUserDate[2]); 
+        User.Permissions = stoi(Trim(vUserDate[3]));
+
+    }
+    else if (vUserDate.size() == 3)
+    {   
+        User.Username    = Trim(vUserDate[0]);
+        User.Password    = Trim(vUserDate[1]);
+        User.Salt        = ""; 
+        User.Permissions = stoi(Trim(vUserDate[2])); 
+
     }
     return User;
 }
@@ -180,6 +231,7 @@ string ConvertUserRecordToLine(sUsers User, string Seperator = "#//#")
     string stUserRecord = "";
     stUserRecord += User.Username + Seperator;
     stUserRecord += User.Password + Seperator;
+    stUserRecord += User.Salt + Seperator;
     stUserRecord += to_string(User.Permissions);
     return stUserRecord;
 }
@@ -209,6 +261,8 @@ vector<sClient> LoadClientDataFromFile(string FileName)
     return vClients; 
 }
 
+vector<sUsers> SaveUsersDataToFile(string FileName, vector<sUsers> vUsers);
+
 vector<sUsers> LoadUsersDataFromFile(string FileName)
 {
     vector<sUsers> vUsers;
@@ -230,6 +284,22 @@ vector<sUsers> LoadUsersDataFromFile(string FileName)
             }
         }
         MyFile.close();
+    }
+
+     bool NeedsMigration = false;
+    for (sUsers& U : vUsers)
+    {
+        if (U.Salt.empty())
+        {
+            string PlainPassword = U.Password;  
+            U.Salt     = GenerateSalt();
+            U.Password = HashPassword(PlainPassword, U.Salt);
+            NeedsMigration = true;
+        }
+    }
+    if (NeedsMigration)
+    {
+        SaveUsersDataToFile(FileName, vUsers);
     }
     return vUsers; 
 }
@@ -430,7 +500,7 @@ void PrintUserRecordLine(sUsers User)
 {
    cout << "| " << setw(15) << left << User.Username;
    cout << "| " << setw(10) << left << User.Password;
-   cout << "| " << setw(40) << left << User.Permissions;
+   cout << "| " << setw(104) << left << User.Permissions;
 }
 
 void ShowAllUsersScreen()
@@ -441,7 +511,7 @@ void ShowAllUsersScreen()
     cout << "_________________________________________\n" << endl;
     cout << "| " << left << setw(15) << "User Name";
     cout << "| " << left << setw(10) << "Password";
-    cout << "| " << left << setw(40) << "Permissions";
+    cout << "| " << left << setw(104) << "Permissions";
     cout << "\n_______________________________________________________";
     cout << "_________________________________________\n" << endl;
     
@@ -601,6 +671,8 @@ sUsers ReadNewUser()
 void AddNewUser(vector<sUsers> &vUsers)
 {
     sUsers User = ReadNewUser();
+    User.Salt = GenerateSalt();
+    User.Password = HashPassword(User.Password, User.Salt);
     AddDataLineToFile(UsersFileName, ConvertUserRecordToLine(User));
     vUsers = LoadUsersDataFromFile(UsersFileName);
 }
@@ -649,7 +721,7 @@ bool FindUserByUsernameAndPassword(string Username, string Password, sUsers& Use
     vector<sUsers> vUsers = LoadUsersDataFromFile(UsersFileName);
     for (sUsers U : vUsers) 
     {
-        if (U.Username == Username && U.Password == Password)
+        if (U.Username == Username && VerifyPassword(Password, U.Salt, U.Password)) 
         { 
             Users = U; 
             return true;
@@ -1271,7 +1343,10 @@ void PreformMenuOption(Menue Choice, vector<sClient>& vClients, vector<sUsers>& 
                 LogIn();
                 break;
             }   
-        case Exit: 
+        case Exit:
+            ClearScreen();
+            cout << "\nThank you for using our system!\n";
+             exit(0);
             break;
     }
 
@@ -1309,8 +1384,8 @@ void startMainMenu()
 
     do 
     {   
-        string AccountNumber;
-        string Username;
+        string AccountNumber = "";
+        string Username = "";
         ClearScreen();
         Choice = start();
         PreformMenuOption(Choice, vClients, vUsers, AccountNumber, Username);
@@ -1388,7 +1463,7 @@ void LogIn()
         cout << "Password: ";
         Password = ReadPassword();
 
-        // تنظيف الإدخال من أي مسافات زائدة
+
         Username = Trim(Username);
         Password = Trim(Password);
 
